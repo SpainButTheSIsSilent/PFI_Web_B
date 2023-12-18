@@ -393,20 +393,25 @@ async function renderPhotosList() {
     let photos = await API.GetPhotos();
 
     let $photosLayout = $('<div class="photosLayout"></div>');
+    let nbr = 0;
 
-    photos.data.forEach(async function (photo) {
+    for (const photo of photos.data) {
+        
         let iconEdit = "";
         let iconDelete = "";
-        let divAmis = "";
-        let likesSum = "0";
+        let partager = "";
 
+        photos.data[nbr].likesSum = 0;
+        photos.data[nbr].liked = false;
+        let iconLike = `<i class="thumbIcon fa-regular fa-thumbs-up"></i>`;
+        
         if (photo.OwnerId == user.Id) {
             iconEdit = `<div class="iconEdit fas fa-pencil mx-2" style="color: blue;" data-photo-id="${photo.Id}"></div>`;
             iconDelete = `<div class="iconDelete fas fa-trash mx-2" style="color: blue;" data-photo-id="${photo.Id}"></div>`;
         }
 
         if (photo.Shared) {
-            divAmis = `<div class="UserAvatarSmall" userId="${photo.OwnerId}" style="background-image:url('images/shared.png')" title="${photo.Owner.Name}"></div>`;
+            partager = `<div class="UserAvatarSmall" userId="${photo.OwnerId}" style="background-image:url('images/shared.png')" 		    title="${photo.Owner.Name}"></div>`;
         }
 
         $photosLayout.append(`
@@ -418,44 +423,61 @@ async function renderPhotosList() {
                 <div class="photoDetailClick" data-photo-id="${photo.Id}">
                     <div class="photoImage" style="background-image:url('${photo.Image}')">
                         <div class="UserAvatarSmall" userId="${photo.Owner.Id}" style="background-image:url('${photo.Owner.Avatar}')" title="${photo.Owner.Name}"></div>
-                        ${divAmis}
+                        ${partager}
                     </div>
                 </div>   
                 <div class="photoCreationDate">
                     ${dateFrancais(photo.Date)}
-                    <span class="likesSummary" data-photo-id="${photo.Id}">
-                        ${likesSum}
-                        <i class="fa-thumbs-up thumbIcon"></i>
+                    <span class="likesSummary" data-photo-pos="${nbr}"">
+                        ${photos.data[nbr].likesSum}
+                        ${iconLike}
                     </span>
-
                 </div>
             </div>`);
+
+        nbr +=1 ; 
+    }
+
+    $photosLayout.on('click', '.thumbIcon', async function () {
+        let $likesSummary = $(this).closest('.likesSummary');
+        let position = $likesSummary.data('photo-pos');
+
+        if (photos.data[position].liked) {
+            photos.data[position].likesSum -= 1;
+            photos.data[position].liked = false;
+            
+        } else {
+            photos.data[position].likesSum += 1;
+            photos.data[position].liked = true;
+            let data = {};
+            data.PhotoId = photos.data[position].Id;
+            data.OwnerId = photos.data[position].OwnerId;
+            data.Name = photos.data[position].Owner.Name;
+            
+        }
+
+        $likesSummary.empty().append(`
+            ${photos.data[position].likesSum}
+            <i class="thumbIcon ${photos.data[position].liked ? 'fa-solid' : 'fa-regular'} fa-thumbs-up"></i>
+        `);
+    });
+//pas sur si c'est parfait mais ça derait marcher, tu va chercher le mouseover et t'affiche le tooltip à la position de l'icone **A AJUSTER**
+    $photosLayout.on('mouseenter', '.thumbIcon', function () {
+        console.log("allo");
+        let $likesSummary = $(this).closest('.likesSummary');
+        let position = $likesSummary.data('photo-pos');
+    
+        if (photos.data[position].likesSum > 0) {
+            let namesTooltip = names.join('<br>');
+            let tooltip = `<div class="namesTooltip">${namesTooltip}</div>`;
+            $(this).append(tooltip);
+        }
+    });
+    
+    $photosLayout.on('mouseleave', '.thumbIcon', function () {
+        $('.namesTooltip').remove();
     });
 
-    $photosLayout.on('click', '.iconEdit', function () {
-        let photoId = $(this).data('photo-id');
-        console.log(`Edit clicked for photo ID: ${photoId}`);
-        renderModifPhoto(photoId);
-    });
-
-    $photosLayout.on('click', '.photoDetailClick', function () {
-        let photoId = $(this).data('photo-id');
-        console.log(`Photo clicked for photo ID: ${photoId}`);
-        renderDetailPage(photoId);
-    });
-
-    $photosLayout.on('click', '.iconDelete', function () {
-        let photoId = $(this).data('photo-id');
-        console.log(`Delete clicked for photo ID: ${photoId}`);
-        renderConfirmDeletePhoto(photoId);
-    });
-
-    $photosLayout.on('click', '.thumbIcon', function () {
-        let photoId = $(this).closest('.likesSummary').data('photo-id');
-        console.log(`Thumb icon clicked for photo ID: ${photoId}`);
-
-        // Rajouter whatever il faut ici
-    });
 
     $("#content").append($photosLayout);
 }
@@ -1069,14 +1091,14 @@ async function renderDetailPage(idPhoto) {// changer le likeCount, hardcoder a 0
                     <div class="PhotoDetailsContainer">
                         <div class="photoDetailsTitle">${photo.Title}</div>
                         <div class="photoDetailsLargeImage">
-                        <img src="${photo.Image}" alt="${photo.Title}" style="width: 100%;">
+                        <img src="${photo.Image}" alt="${photo.Title}" style="width: 100%;>
                     </div>
                     <div class="photoDetailsCreationDate">
                         <div class="photoCreationDate">${dateFrancais(photo.Date)}</div>
                         <div class="likesSummary">
                         <span class="likeCount">${likeCount}</span>
                         <span class="likeIcon">❤️</span>
-                        </div>
+                    </div>
                     </div>
                     <div class="photoDetailsDescription">${photo.Description}</div>
                     </div>
